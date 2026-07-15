@@ -3,7 +3,7 @@ import { useParams, Navigate } from 'react-router-dom'
 import { useSession } from '../hooks/useSession'
 import { getBoardById } from '../lib/api/boards'
 import type { Board } from '../types/board'
-
+import { Canvas } from '../components/board/Canvas'
 /** 2주차에 실제 캔버스로 채워질 자리. 1주차에는 보드 생성 흐름 확인용 자리표시자. */
 export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
@@ -22,9 +22,7 @@ export function BoardPage() {
     <div style={{ padding: 24 }}>
       <a href="/boards">← 내 보드 목록</a>
       <h1>{board?.title ?? '불러오는 중...'}</h1>
-      <p style={{ color: 'var(--color-text-muted)' }}>
-        캔버스는 2주차에 구현됩니다.
-      </p>
+      {board && <Canvas board={board} />}
     </div>
   )
 }
