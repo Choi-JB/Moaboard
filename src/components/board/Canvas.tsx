@@ -1,13 +1,12 @@
 import { useEffect } from 'react'
 import { useBoardObjectsStore } from '../../stores/useBoardObjectsStore'
-import { listActiveObjects } from '../../lib/api/boardObjects'
+import { listActiveObjects, createObject } from '../../lib/api/boardObjects'
 import type { Board } from '../../types/board'
 
 import { MemoObject } from './CanvasObject/MemoObject'
 import { ImageObject } from './CanvasObject/ImageObject'
-import type { BoardObject, MemoData, ImageData } from '../../types/boardObject'
+import type { BoardObject, BoardObjectType, MemoData, ImageData } from '../../types/boardObject'
 
-import type { BoardObjectType } from '../../types/boardObject'
 
 const CANVAS_PIXELS: Record<Board['canvas_size'], { width: number; height: number }> = {
     fhd: { width: 1920, height: 1080 },
@@ -17,13 +16,16 @@ const CANVAS_PIXELS: Record<Board['canvas_size'], { width: number; height: numbe
 
 interface CanvasProps {
     board: Board
-
+    userId: string
+    creationMode: BoardObjectType | null
+    onObjectCreated: () => void
 }
 
-export function Canvas({ board }: CanvasProps) {
+export function Canvas({ board, userId, creationMode, onObjectCreated }: CanvasProps) {
     //selector로 구독
     const objects = useBoardObjectsStore((s) => s.objects)
     const setObjects = useBoardObjectsStore((s) => s.setObjects)
+    const addObject = useBoardObjectsStore((s) => s.addObject)
 
     useEffect(() => {
         listActiveObjects(board.id).then(setObjects)
@@ -31,8 +33,48 @@ export function Canvas({ board }: CanvasProps) {
 
     const { width, height } = CANVAS_PIXELS[board.canvas_size]
 
+    async function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
+        if (!creationMode) return
+        if (e.target !== e.currentTarget) return
+
+        const rect = e.currentTarget.getBoundingClientRect()
+        const posX = e.clientX - rect.left
+        const posY = e.clientY - rect.top
+
+        if( creationMode === 'memo') {
+            const created = await createObject({
+                boardId: board.id,
+                type: 'memo',
+                posX,
+                posY,
+                width: 200,
+                height: 200,
+                data: { content: '', color: '#FFEB3B' },
+                createdBy: userId,
+            })
+            addObject(created)
+        } 
+        else if (creationMode === 'image') {
+            const url = window.prompt('이미지 URL을 입력하세요')
+            if (!url) return
+            const created = await createObject({
+                boardId: board.id,
+                type: 'image',
+                posX,
+                posY,
+                width: 200,
+                height: 200,
+                data: { url },
+                createdBy: userId,
+            })
+            addObject(created)
+        }
+        onObjectCreated()
+    }
+    
     return (
         <div
+            onClick={handleCanvasClick}
             style={{
                 position: 'relative',
                 width,
@@ -41,25 +83,7 @@ export function Canvas({ board }: CanvasProps) {
                 overflow: 'auto',
             }}
         >
-            {/* {objects.map((object) => (
-                <div
-                    key={object.id}
-                    style={{
-                        position: 'absolute',
-                        left: object.pos_x,
-                        top: object.pos_y,
-                        width: object.width,
-                        height: object.height,
-                        border: '1px solid #ccc',
-                        background: '#fff',
-                        fontSize: 12,
-                        padding: 4,
-                        overflow: 'hidden',
-                    }}
-                >
-                    {object.type} #{object.id.slice(0, 4)}
-                </div>
-            ))} */}
+            
             {objects.map((object) =>
                 object.type === 'memo' ? (
                     <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} />

@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
+import { useAutoSave } from '../../../hooks/useAutoSave'
 import type { BoardObject, ImageData } from '../../../types/boardObject'
 
 interface ImageObjectProps {
@@ -8,6 +9,7 @@ interface ImageObjectProps {
 
 export function ImageObject({ object }: ImageObjectProps) {
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
+    const { commitPosition, deleteObject } = useAutoSave()
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
 
     function handlePointerDown(e: React.PointerEvent) {
@@ -27,27 +29,52 @@ export function ImageObject({ object }: ImageObjectProps) {
         updateObjectPosition(object.id, dragStart.current.posX + dx, dragStart.current.posY + dy)
     }
 
-    function handlePointerUp() {
+    function handlePointerUp(e: React.PointerEvent) {
+        if (!dragStart.current) return
+        const dx = e.clientX - dragStart.current.pointerX
+        const dy = e.clientY - dragStart.current.pointerY
+        const finalX = dragStart.current.posX + dx
+        const finalY = dragStart.current.posY + dy
         dragStart.current = null
+        commitPosition(object.id, finalX, finalY)
     }
 
     return (
-        <img
-            src={object.data.url}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            style={{
-                position: 'absolute',
-                left: object.pos_x,
-                top: object.pos_y,
-                width: object.width,
-                height: object.height,
-                cursor: 'grab',
-                objectFit: 'cover',
-                borderRadius: 4,
-            }}
-            draggable={false}
-        />
+        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y }}>
+            <button
+                onClick={() => deleteObject(object.id)}
+                style={{
+                    position: 'absolute',
+                    top: -8,
+                    right: -8,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#00000099',
+                    color: '#fff',
+                    fontSize: 12,
+                    lineHeight: '20px',
+                    cursor: 'pointer',
+                    zIndex: 1,
+                }}
+            >
+                ✕
+            </button>
+            <img
+                src={object.data.url}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                style={{
+                    width: object.width,
+                    height: object.height,
+                    cursor: 'grab',
+                    objectFit: 'cover',
+                    borderRadius: 4,
+                }}
+                draggable={false}
+            />
+        </div>
     )
 }

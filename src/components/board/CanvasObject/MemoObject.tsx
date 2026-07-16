@@ -1,12 +1,15 @@
 import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
+import { useAutoSave } from '../../../hooks/useAutoSave'
 import type { BoardObject, MemoData } from '../../../types/boardObject'
+
 
 interface MemoObjectProps {
     object: BoardObject & { data: MemoData }
 }
 
 export function MemoObject({ object }: MemoObjectProps) {
+    const{ commitPosition, commitMemoData, deleteObject } = useAutoSave()
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
 
@@ -30,9 +33,17 @@ export function MemoObject({ object }: MemoObjectProps) {
     }
 
     //드래그 종료
-    function handlePointerUp() {
+    function handlePointerUp(e: React.PointerEvent) {
+        if (!dragStart.current) return
+
+        //최종 좌표 계산
+        const dx = e.clientX - dragStart.current.pointerX
+        const dy = e.clientY - dragStart.current.pointerY
+        const finalX = dragStart.current.posX + dx
+        const finalY = dragStart.current.posY + dy
+        
         dragStart.current = null
-        // 6번 단계(useAutoSave)에서 여기에 DB 저장 호출을 붙일 예정
+        commitPosition(object.id, finalX, finalY)
     }
 
     return (
@@ -53,8 +64,29 @@ export function MemoObject({ object }: MemoObjectProps) {
                 borderRadius: 4,
             }}
         >
+             <button
+                onClick={() => deleteObject(object.id)}
+                onPointerDown={(e) => e.stopPropagation()}
+                style={{
+                    position: 'absolute',
+                    top: -8,
+                    right: -8,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#00000099',
+                    color: '#fff',
+                    fontSize: 12,
+                    lineHeight: '20px',
+                    cursor: 'pointer',
+                }}
+            >
+                X
+            </button>
             <textarea
-                defaultValue={object.data.content}
+                value={object.data.content}
+                onChange={(e) => commitMemoData(object.id, { ...object.data, content: e.target.value })}
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{
                     width: '100%',
