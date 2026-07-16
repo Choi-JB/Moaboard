@@ -12,6 +12,7 @@ export function ImageObject({ object }: ImageObjectProps) {
     const { commitPosition, deleteObject } = useAutoSave()
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
 
+    //드래그 시작
     function handlePointerDown(e: React.PointerEvent) {
         e.currentTarget.setPointerCapture(e.pointerId)
         dragStart.current = {
@@ -22,6 +23,7 @@ export function ImageObject({ object }: ImageObjectProps) {
         }
     }
 
+    //드래그 중 (포인터 이동)
     function handlePointerMove(e: React.PointerEvent) {
         if (!dragStart.current) return
         const dx = e.clientX - dragStart.current.pointerX
@@ -29,6 +31,7 @@ export function ImageObject({ object }: ImageObjectProps) {
         updateObjectPosition(object.id, dragStart.current.posX + dx, dragStart.current.posY + dy)
     }
 
+    //드래그 종료
     function handlePointerUp(e: React.PointerEvent) {
         if (!dragStart.current) return
         const dx = e.clientX - dragStart.current.pointerX
