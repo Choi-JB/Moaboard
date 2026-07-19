@@ -2,16 +2,20 @@ import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 import { useAutoSave } from '../../../hooks/useAutoSave'
 import type { BoardObject, MemoData } from '../../../types/boardObject'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 
 interface MemoObjectProps {
     object: BoardObject & { data: MemoData }
+    channel: RealtimeChannel | null
 }
 
-export function MemoObject({ object }: MemoObjectProps) {
+
+export function MemoObject({ object, channel }: MemoObjectProps) {
     const{ commitPosition, commitMemoData, deleteObject } = useAutoSave()
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
+    const lastSentRef = useRef(0)
 
     //드래그 시작
     function handlePointerDown(e: React.PointerEvent) {
@@ -27,9 +31,19 @@ export function MemoObject({ object }: MemoObjectProps) {
     //드래그 중 (포인터 이동)
     function handlePointerMove(e: React.PointerEvent) {
         if (!dragStart.current) return
+
         const dx = e.clientX - dragStart.current.pointerX
         const dy = e.clientY - dragStart.current.pointerY
-        updateObjectPosition(object.id, dragStart.current.posX + dx, dragStart.current.posY + dy)
+        const x = dragStart.current.posX + dx
+        const y = dragStart.current.posY + dy
+        updateObjectPosition(object.id, x, y)
+
+        //브로드캐스트 전송 (100ms마다 한 번) - 드래그 중 위치 동기화
+        const now = Date.now()
+        if (channel && now - lastSentRef.current > 100) {
+            lastSentRef.current = now
+            channel.send({ type: 'broadcast', event: 'position', payload: { objectId: object.id, x, y } })
+        }
     }
 
     //드래그 종료

@@ -1,3 +1,4 @@
+/** 보드 오브젝트 목록을 관리하는 스토어 */
 import { create } from 'zustand'
 import type { BoardObject } from '../types/boardObject'
 

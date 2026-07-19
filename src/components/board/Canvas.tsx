@@ -6,6 +6,7 @@ import type { Board } from '../../types/board'
 import { MemoObject } from './CanvasObject/MemoObject'
 import { ImageObject } from './CanvasObject/ImageObject'
 import type { BoardObject, BoardObjectType, MemoData, ImageData } from '../../types/boardObject'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 
 const CANVAS_PIXELS: Record<Board['canvas_size'], { width: number; height: number }> = {
@@ -19,9 +20,10 @@ interface CanvasProps {
     userId: string
     creationMode: BoardObjectType | null
     onObjectCreated: () => void
+    channel: RealtimeChannel | null
 }
 
-export function Canvas({ board, userId, creationMode, onObjectCreated }: CanvasProps) {
+export function Canvas({ board, userId, creationMode, onObjectCreated, channel }: CanvasProps) {
     //selector로 구독
     const objects = useBoardObjectsStore((s) => s.objects)
     const setObjects = useBoardObjectsStore((s) => s.setObjects)
@@ -86,9 +88,9 @@ export function Canvas({ board, userId, creationMode, onObjectCreated }: CanvasP
             
             {objects.map((object) =>
                 object.type === 'memo' ? (
-                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} />
+                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} channel={channel} />
                 ) : (
-                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} />
+                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} channel={channel} />
                 ),
             )}
 

@@ -2,15 +2,18 @@ import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 import { useAutoSave } from '../../../hooks/useAutoSave'
 import type { BoardObject, ImageData } from '../../../types/boardObject'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface ImageObjectProps {
     object: BoardObject & { data: ImageData }
+    channel: RealtimeChannel | null
 }
 
-export function ImageObject({ object }: ImageObjectProps) {
+export function ImageObject({ object, channel }: ImageObjectProps) {
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const { commitPosition, deleteObject } = useAutoSave()
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
+    const lastSentRef = useRef(0)
 
     //드래그 시작
     function handlePointerDown(e: React.PointerEvent) {
@@ -28,7 +31,15 @@ export function ImageObject({ object }: ImageObjectProps) {
         if (!dragStart.current) return
         const dx = e.clientX - dragStart.current.pointerX
         const dy = e.clientY - dragStart.current.pointerY
-        updateObjectPosition(object.id, dragStart.current.posX + dx, dragStart.current.posY + dy)
+        const x = dragStart.current.posX + dx
+        const y = dragStart.current.posY + dy
+        updateObjectPosition(object.id, x, y)
+
+        const now = Date.now()
+        if (channel && now - lastSentRef.current > 100) {
+            lastSentRef.current = now
+            channel.send({ type: 'broadcast', event: 'position', payload: { objectId: object.id, x, y } })
+        }
     }
 
     //드래그 종료
