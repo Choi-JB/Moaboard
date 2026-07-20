@@ -161,9 +161,16 @@ using (owner_id = auth.uid());
 
 alter table "BOARD_MEMBER" enable row level security;
 
+-- user_id 조건을 추가하는 이유: upsert(..., {onConflict, ignoreDuplicates: true})는
+-- INSERT ... ON CONFLICT DO NOTHING으로 처리되는데, 충돌 여부를 확인하려면 SELECT 정책도
+-- 통과해야 한다. 아직 멤버가 아닌 유저가 "본인을 멤버로 등록"하려는 이 시점엔
+-- get_board_role만으로는 항상 실패한다 (BOARD 테이블의 동일 패턴 참고).
 create policy "member_select_same_board"
 on "BOARD_MEMBER" for select
-using (get_board_role(board_id, auth.uid()) is not null);
+using (
+  user_id = auth.uid()
+  or get_board_role(board_id, auth.uid()) is not null
+);
 
 create policy "member_insert_self_only"
 on "BOARD_MEMBER" for insert

@@ -18,12 +18,13 @@ const CANVAS_PIXELS: Record<Board['canvas_size'], { width: number; height: numbe
 interface CanvasProps {
     board: Board
     userId: string
+    nickname: string
     creationMode: BoardObjectType | null
     onObjectCreated: () => void
     channel: RealtimeChannel | null
 }
 
-export function Canvas({ board, userId, creationMode, onObjectCreated, channel }: CanvasProps) {
+export function Canvas({ board, userId, nickname, creationMode, onObjectCreated, channel }: CanvasProps) {
     //selector로 구독
     const objects = useBoardObjectsStore((s) => s.objects)
     const setObjects = useBoardObjectsStore((s) => s.setObjects)
@@ -88,9 +89,9 @@ export function Canvas({ board, userId, creationMode, onObjectCreated, channel }
             
             {objects.map((object) =>
                 object.type === 'memo' ? (
-                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} channel={channel} />
+                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} channel={channel} userId={userId} nickname={nickname} />
                 ) : (
-                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} channel={channel} />
+                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} channel={channel} userId={userId} nickname={nickname} />
                 ),
             )}
 

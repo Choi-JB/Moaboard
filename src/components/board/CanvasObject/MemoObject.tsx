@@ -1,6 +1,8 @@
 import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 import { useAutoSave } from '../../../hooks/useAutoSave'
+import { useSoftLockStore } from '../../../stores/useSoftLockStore'
+import { SoftLockOverlay } from './SoftLockOverlay'
 import type { BoardObject, MemoData } from '../../../types/boardObject'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -8,14 +10,30 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 interface MemoObjectProps {
     object: BoardObject & { data: MemoData }
     channel: RealtimeChannel | null
+    userId: string
+    nickname: string
 }
 
+//잠금 상태 유지 시간
+const HEARTBEAT_MS = 4000
 
-export function MemoObject({ object, channel }: MemoObjectProps) {
+export function MemoObject({ object, channel, userId, nickname }: MemoObjectProps) {
     const{ commitPosition, commitMemoData, deleteObject } = useAutoSave()
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
+    const lock = useSoftLockStore((s) => s.locks[object.id])
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
     const lastSentRef = useRef(0)
+    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    //잠금 신호 전송
+    function sendLock(action: 'dragging' | 'editing' | 'end') {
+        if (channel) {
+            channel.send({ 
+                type: 'broadcast', 
+                event: 'lock', 
+                payload: { objectId: object.id, userId, nickname, action } })
+        }
+    }
 
     //드래그 시작
     function handlePointerDown(e: React.PointerEvent) {
@@ -26,6 +44,7 @@ export function MemoObject({ object, channel }: MemoObjectProps) {
             posX: object.pos_x,
             posY: object.pos_y,
         }
+        sendLock('dragging')
     }
 
     //드래그 중 (포인터 이동)
@@ -58,7 +77,24 @@ export function MemoObject({ object, channel }: MemoObjectProps) {
         
         dragStart.current = null
         commitPosition(object.id, finalX, finalY)
+        sendLock('end')
     }
+
+    //텍스트 편집 시작: 즉시 신호 + 4초마다 하트비트
+    function handleFocus() {
+        sendLock('editing')
+        heartbeatRef.current = setInterval(() => sendLock('editing'), HEARTBEAT_MS)
+    }
+
+    //텍스트 편집 종료
+    function handleBlur() {
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+        sendLock('end')
+    }
+
+    //다른 사람이 잠금 설정되어 있는지 확인
+    const lockedByOther = Boolean(lock && lock.userId !== userId) 
 
     return (
         <div
@@ -76,8 +112,12 @@ export function MemoObject({ object, channel }: MemoObjectProps) {
                 cursor: 'grab',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 borderRadius: 4,
+
+                opacity: lockedByOther ? 0.6 : 1,
+                pointerEvents: lockedByOther ? 'none' : 'auto',
             }}
         >
+            {lockedByOther && <SoftLockOverlay nickname={lock.nickname} />}
              <button
                 onClick={() => deleteObject(object.id)}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -101,6 +141,10 @@ export function MemoObject({ object, channel }: MemoObjectProps) {
             <textarea
                 value={object.data.content}
                 onChange={(e) => commitMemoData(object.id, { ...object.data, content: e.target.value })}
+                
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{
                     width: '100%',

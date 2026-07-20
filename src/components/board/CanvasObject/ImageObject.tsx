@@ -1,19 +1,33 @@
 import { useRef } from 'react'
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 import { useAutoSave } from '../../../hooks/useAutoSave'
+import { useSoftLockStore } from '../../../stores/useSoftLockStore'
+import { SoftLockOverlay } from './SoftLockOverlay'
 import type { BoardObject, ImageData } from '../../../types/boardObject'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface ImageObjectProps {
     object: BoardObject & { data: ImageData }
     channel: RealtimeChannel | null
+    userId: string
+    nickname: string
 }
 
-export function ImageObject({ object, channel }: ImageObjectProps) {
+export function ImageObject({ object, channel, userId, nickname }: ImageObjectProps) {
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const { commitPosition, deleteObject } = useAutoSave()
+    const lock = useSoftLockStore((s) => s.locks[object.id])
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
     const lastSentRef = useRef(0)
+
+    //잠금 신호 전송
+    function sendLock(action: 'dragging' | 'end') {
+        channel?.send({
+            type: 'broadcast',
+            event: 'lock',
+            payload: { objectId: object.id, userId, nickname, action },
+        })
+    }
 
     //드래그 시작
     function handlePointerDown(e: React.PointerEvent) {
@@ -24,6 +38,7 @@ export function ImageObject({ object, channel }: ImageObjectProps) {
             posX: object.pos_x,
             posY: object.pos_y,
         }
+        sendLock('dragging')
     }
 
     //드래그 중 (포인터 이동)
@@ -51,10 +66,16 @@ export function ImageObject({ object, channel }: ImageObjectProps) {
         const finalY = dragStart.current.posY + dy
         dragStart.current = null
         commitPosition(object.id, finalX, finalY)
+        sendLock('end')
     }
 
+    //다른 사람이 잠금 설정되어 있는지 확인
+    const lockedByOther = Boolean(lock && lock.userId !== userId) 
+
     return (
-        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y }}>
+        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y, opacity: lockedByOther ? 0.6 : 1,
+            pointerEvents: lockedByOther ? 'none' : 'auto', }}>
+            {lockedByOther && <SoftLockOverlay nickname={lock.nickname} />}
             <button
                 onClick={() => deleteObject(object.id)}
                 style={{
