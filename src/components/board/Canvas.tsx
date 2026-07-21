@@ -7,7 +7,7 @@ import { MemoObject } from './CanvasObject/MemoObject'
 import { ImageObject } from './CanvasObject/ImageObject'
 import type { BoardObject, BoardObjectType, MemoData, ImageData } from '../../types/boardObject'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-
+import type { ObjectFilter } from './ObjectListDrawer/ObjectFilterTabs'
 
 const CANVAS_PIXELS: Record<Board['canvas_size'], { width: number; height: number }> = {
     fhd: { width: 1920, height: 1080 },
@@ -22,9 +22,11 @@ interface CanvasProps {
     creationMode: BoardObjectType | null
     onObjectCreated: () => void
     channel: RealtimeChannel | null
+    objectFilter: ObjectFilter
+    canEdit: boolean
 }
 
-export function Canvas({ board, userId, nickname, creationMode, onObjectCreated, channel }: CanvasProps) {
+export function Canvas({ board, userId, nickname, creationMode, onObjectCreated, channel, objectFilter, canEdit }: CanvasProps) {
     //selector로 구독
     const objects = useBoardObjectsStore((s) => s.objects)
     const setObjects = useBoardObjectsStore((s) => s.setObjects)
@@ -36,7 +38,9 @@ export function Canvas({ board, userId, nickname, creationMode, onObjectCreated,
 
     const { width, height } = CANVAS_PIXELS[board.canvas_size]
 
+    //캔버스 클릭 시 메모 또는 이미지 생성
     async function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
+        if (!canEdit) return
         if (!creationMode) return
         if (e.target !== e.currentTarget) return
 
@@ -74,6 +78,14 @@ export function Canvas({ board, userId, nickname, creationMode, onObjectCreated,
         }
         onObjectCreated()
     }
+
+    //객체 리스트에서 객체 선택 시 다른건 뿌옇게 보이게
+    function isDimmed(object: BoardObject) {  
+        const isMine = object.created_by === userId
+        if (objectFilter === 'mine') return !isMine
+        if (objectFilter === 'others') return isMine
+        return false
+    }
     
     return (
         <div
@@ -89,9 +101,9 @@ export function Canvas({ board, userId, nickname, creationMode, onObjectCreated,
             
             {objects.map((object) =>
                 object.type === 'memo' ? (
-                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} channel={channel} userId={userId} nickname={nickname} />
+                    <MemoObject key={object.id} object={object as BoardObject & { data: MemoData }} channel={channel} userId={userId} nickname={nickname} dimmed={isDimmed(object)} canEdit={canEdit} />
                 ) : (
-                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} channel={channel} userId={userId} nickname={nickname} />
+                    <ImageObject key={object.id} object={object as BoardObject & { data: ImageData }} channel={channel} userId={userId} nickname={nickname} dimmed={isDimmed(object)} canEdit={canEdit} />
                 ),
             )}
 

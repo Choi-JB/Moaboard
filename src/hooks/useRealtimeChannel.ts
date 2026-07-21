@@ -5,6 +5,7 @@ import { getBoardChannel } from '../lib/realtime/channels'
 import { useBoardObjectsStore } from '../stores/useBoardObjectsStore'
 import {listActiveObjects} from '../lib/api/boardObjects'
 import type { BoardObject } from '../types/boardObject'
+import type { BoardRole } from '../types/boardMember'
 
 import { usePresenceStore } from '../stores/usePresenceStore'
 import {getAvatarColor} from '../lib/realtime/avatarColor'
@@ -13,7 +14,17 @@ import { useSoftLockStore } from '../stores/useSoftLockStore'
 //해당 시간 경과시 편집 종료 알림
 const LOCK_TIMEOUT_MS = 8000
 
-export function useRealtimeChannel(boardId: string, userId: string, nickname: string, onReconnect?: () => void) {
+export type MemberChangeEvent = 
+| { type: 'upsert'; userId: string; role: BoardRole }
+| { type: 'removed'; userId: string }
+
+export function useRealtimeChannel(
+  boardId: string, 
+  userId: string, 
+  nickname: string, 
+  onReconnect?: () => void,
+  onMemberChange?: (event: MemberChangeEvent) => void
+) {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null)
   const addObject = useBoardObjectsStore((s) => s.addObject)
   const setObjects = useBoardObjectsStore((s) => s.setObjects)
@@ -30,6 +41,9 @@ export function useRealtimeChannel(boardId: string, userId: string, nickname: st
   //onReconnect가 매 렌더마다 새 함수여도 채널을 다시 구독하지 않도록 ref로 최신값만 참조
   const onReconnectRef = useRef(onReconnect)
   onReconnectRef.current = onReconnect
+  const onMemberChangeRef = useRef(onMemberChange)
+  onMemberChangeRef.current = onMemberChange
+
 
   useEffect(() => {
     if (!boardId || !userId) return
@@ -53,6 +67,20 @@ export function useRealtimeChannel(boardId: string, userId: string, nickname: st
           }
         } else if (payload.eventType === 'DELETE') {
           removeObject((payload.old as BoardObject).id)
+        }
+      },
+    )
+
+    //참여자 role 변경/강퇴 수신
+    channel.on('postgres_changes',
+      { event: '*', schema: 'public', table: 'BOARD_MEMBER', filter: `board_id=eq.${boardId}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const old = payload.old as { user_id: string }
+          onMemberChangeRef.current?.({ type: 'removed', userId: old.user_id })
+        } else {
+          const row = payload.new as { user_id: string; role: BoardRole }
+          onMemberChangeRef.current?.({ type: 'upsert', userId: row.user_id, role: row.role })
         }
       },
     )

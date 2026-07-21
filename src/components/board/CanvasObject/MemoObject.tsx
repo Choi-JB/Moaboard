@@ -12,18 +12,21 @@ interface MemoObjectProps {
     channel: RealtimeChannel | null
     userId: string
     nickname: string
+    dimmed? : boolean
+    canEdit: boolean
 }
 
 //잠금 상태 유지 시간
 const HEARTBEAT_MS = 4000
 
-export function MemoObject({ object, channel, userId, nickname }: MemoObjectProps) {
+export function MemoObject({ object, channel, userId, nickname, dimmed, canEdit }: MemoObjectProps) {
     const{ commitPosition, commitMemoData, deleteObject } = useAutoSave()
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const lock = useSoftLockStore((s) => s.locks[object.id])
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
     const lastSentRef = useRef(0)
     const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
 
     //잠금 신호 전송
     function sendLock(action: 'dragging' | 'editing' | 'end') {
@@ -98,9 +101,9 @@ export function MemoObject({ object, channel, userId, nickname }: MemoObjectProp
 
     return (
         <div
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
+            onPointerDown={canEdit ? handlePointerDown : undefined}
+            onPointerMove={canEdit ? handlePointerMove : undefined}
+            onPointerUp={canEdit ? handlePointerUp : undefined}
             style={{
                 position: 'absolute',
                 left: object.pos_x,
@@ -113,12 +116,12 @@ export function MemoObject({ object, channel, userId, nickname }: MemoObjectProp
                 boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 borderRadius: 4,
 
-                opacity: lockedByOther ? 0.6 : 1,
+                opacity: lockedByOther ? 0.6 : dimmed ? 0.3 : 1,
                 pointerEvents: lockedByOther ? 'none' : 'auto',
             }}
         >
             {lockedByOther && <SoftLockOverlay nickname={lock.nickname} />}
-             <button
+            {canEdit && <button
                 onClick={() => deleteObject(object.id)}
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{
@@ -137,14 +140,14 @@ export function MemoObject({ object, channel, userId, nickname }: MemoObjectProp
                 }}
             >
                 X
-            </button>
+            </button>}
             <textarea
                 value={object.data.content}
                 onChange={(e) => commitMemoData(object.id, { ...object.data, content: e.target.value })}
                 
                 onFocus={handleFocus}
                 onBlur={handleBlur}
-
+                readOnly={!canEdit}
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{
                     width: '100%',

@@ -1,3 +1,4 @@
+/** 보드 관련 API */
 import { supabase } from '../supabaseClient'
 import type { Board, BoardInsert, BoardUpdate } from '../../types/board'
 import type { BoardRole } from '../../types/boardMember'
@@ -27,12 +28,14 @@ export async function listMyBoards(userId: string): Promise<BoardWithRole[]> {
   }))
 }
 
+/** 보드 정보 조회 */
 export async function getBoardById(boardId: string): Promise<Board> {
   const { data, error } = await supabase
     .from(TABLE)
     .select('*')
     .eq('id', boardId)
-    .single()
+    .is('deleted_at', null)
+    .maybeSingle()
 
   if (error) throw error
   return data as Board
@@ -69,6 +72,7 @@ export async function createBoard(
   return board as Board
 }
 
+/** 보드 정보 업데이트 */
 export async function updateBoard(
   boardId: string,
   patch: BoardUpdate,
@@ -84,6 +88,7 @@ export async function updateBoard(
   return data as Board
 }
 
+/** 보드 삭제 */
 export async function deleteBoard(boardId: string): Promise<void> {
   const { error } = await supabase
     .from(TABLE)
@@ -91,4 +96,24 @@ export async function deleteBoard(boardId: string): Promise<void> {
     .eq('id', boardId)
 
   if (error) throw error
+}
+
+/** 보드 초대 토큰 생성 */
+export async function getBoardByInviteToken(token: string): Promise<Board | null> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('invite_token', token)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as Board | null
+}
+
+/** 보드 멤버 수 조회 */
+export async function getBoardMemberCount(boardId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_board_member_count', { p_board_id: boardId })
+  if (error) throw error
+  return data as number
 }

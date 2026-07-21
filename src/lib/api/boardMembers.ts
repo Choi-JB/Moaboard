@@ -1,8 +1,10 @@
+/** 보드 멤버 관련 API */
 import { supabase } from '../supabaseClient'
 import type { BoardMember, BoardRole } from '../../types/boardMember'
 
 const TABLE = 'BOARD_MEMBER'
 
+/** 보드 멤버 목록 조회 */
 export async function listMembers(boardId: string): Promise<BoardMember[]> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -13,6 +15,7 @@ export async function listMembers(boardId: string): Promise<BoardMember[]> {
   return data as BoardMember[]
 }
 
+/** 보드 멤버 역할 조회 */
 export async function getMyRole(
   boardId: string,
   userId: string,
@@ -76,6 +79,7 @@ export async function getMemberCounts(
   return counts
 }
 
+/** 보드 멤버 제거(강퇴) */
 export async function removeMember(
   boardId: string,
   userId: string,

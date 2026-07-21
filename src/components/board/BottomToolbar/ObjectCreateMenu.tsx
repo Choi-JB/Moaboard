@@ -14,7 +14,7 @@ export function ObjectCreateMenu({ activeMode, onSelect }: ObjectCreateMenuProps
     return (
         <div
             style={{
-                position: 'absolute',
+                position: 'fixed',
                 bottom: 16,
                 left: '50%',
                 transform: 'translateX(-50%)',
@@ -25,6 +25,7 @@ export function ObjectCreateMenu({ activeMode, onSelect }: ObjectCreateMenuProps
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 20,
             }}
         >
             {ITEMS.map((item) => (

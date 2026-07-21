@@ -11,9 +11,11 @@ interface ImageObjectProps {
     channel: RealtimeChannel | null
     userId: string
     nickname: string
+    dimmed? : boolean
+    canEdit: boolean
 }
 
-export function ImageObject({ object, channel, userId, nickname }: ImageObjectProps) {
+export function ImageObject({ object, channel, userId, nickname, dimmed, canEdit }: ImageObjectProps) {
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
     const { commitPosition, deleteObject } = useAutoSave()
     const lock = useSoftLockStore((s) => s.locks[object.id])
@@ -73,10 +75,10 @@ export function ImageObject({ object, channel, userId, nickname }: ImageObjectPr
     const lockedByOther = Boolean(lock && lock.userId !== userId) 
 
     return (
-        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y, opacity: lockedByOther ? 0.6 : 1,
+        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y, opacity: lockedByOther ? 0.6 : dimmed ? 0.3 : 1,
             pointerEvents: lockedByOther ? 'none' : 'auto', }}>
             {lockedByOther && <SoftLockOverlay nickname={lock.nickname} />}
-            <button
+            {canEdit && <button
                 onClick={() => deleteObject(object.id)}
                 style={{
                     position: 'absolute',
@@ -95,12 +97,12 @@ export function ImageObject({ object, channel, userId, nickname }: ImageObjectPr
                 }}
             >
                 ✕
-            </button>
+            </button>}
             <img
                 src={object.data.url}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
+                onPointerDown={canEdit ? handlePointerDown : undefined}
+                onPointerMove={canEdit ? handlePointerMove : undefined}
+                onPointerUp={canEdit ? handlePointerUp : undefined}
                 style={{
                     width: object.width,
                     height: object.height,

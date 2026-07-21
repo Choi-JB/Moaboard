@@ -1,8 +1,10 @@
+/** 보드 객체 관련 API */
 import { supabase } from '../supabaseClient'
 import type { BoardObject, BoardObjectType } from '../../types/boardObject'
 
 const TABLE = 'BOARD_OBJECTS'
 
+/** 보드 활성 객체 목록 조회 */
 export async function listActiveObjects(boardId: string): Promise<BoardObject[]> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -14,6 +16,7 @@ export async function listActiveObjects(boardId: string): Promise<BoardObject[]>
   return data as BoardObject[]
 }
 
+/** 보드 객체 생성 */
 export async function createObject(input: {
   boardId: string
   type: BoardObjectType
@@ -57,6 +60,7 @@ export async function updatePosition(
   if (error) throw error
 }
 
+/** 보드 객체 데이터 업데이트 */
 export async function updateObjectData(
   objectId: string,
   data: BoardObject['data'],
@@ -66,6 +70,7 @@ export async function updateObjectData(
   if (error) throw error
 }
 
+/** 보드 객체 잠금 상태 설정 */
 export async function setLocked(objectId: string, isLocked: boolean): Promise<void> {
   const { error } = await supabase
     .from(TABLE)
