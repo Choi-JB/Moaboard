@@ -46,3 +46,14 @@ npm run dev
 - 실시간 동기화 (Postgres Changes, Broadcast, Presence)
 - 동시 편집 표시(소프트 락)
 - 권한 관리(owner/guest/watcher), 보드 설정, 익명→구글 계정 연동
+
+
+
+## 남은 과제
+1. ui 꾸미기(전체적으로)
+2. 참여자들 목록에서 아이콘 누르면 카드로 정보 표시
+3. props들 store로 이관
+4. DB에서 삭제된 보드, 오브젝트 자동 처리
+5. 익명 유저 자동으로 처리 (pg_cron 잡)
+6. 객체 리스트에서 객체 선택 시 강조 표시
+7. 익명 로그인 유저 구글 로그인으로 연동 (AccountLinkPopover)
