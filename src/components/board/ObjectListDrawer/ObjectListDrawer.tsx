@@ -2,6 +2,9 @@
 import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 import { ObjectFilterTabs, type ObjectFilter } from './ObjectFilterTabs'
 import { ObjectListItem } from './ObjectListItem'
+import { useEffect } from 'react'
+
+
 
 interface ObjectListDrawerProps {
     myUserId: string
@@ -13,6 +16,11 @@ interface ObjectListDrawerProps {
 
 export function ObjectListDrawer({ myUserId, filter, onFilterChange, open, onOpenChange }: ObjectListDrawerProps) {
     const objects = useBoardObjectsStore((s) => s.objects)
+    const setSelectedObjectId = useBoardObjectsStore((s) => s.setSelectedObjectId)
+
+    useEffect(() => {
+        if (!open) setSelectedObjectId(null)
+    }, [open])
 
     const filtered = objects.filter((o) => {
         if (filter === 'mine') return o.created_by === myUserId

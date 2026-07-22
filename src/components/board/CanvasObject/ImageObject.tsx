@@ -11,12 +11,15 @@ interface ImageObjectProps {
     channel: RealtimeChannel | null
     userId: string
     nickname: string
-    dimmed? : boolean
+    dimmed?: boolean
     canEdit: boolean
 }
 
 export function ImageObject({ object, channel, userId, nickname, dimmed, canEdit }: ImageObjectProps) {
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
+    const selectedObjectId = useBoardObjectsStore((s) => s.selectedObjectId)
+    const isSelected = selectedObjectId === object.id
+
     const { commitPosition, deleteObject } = useAutoSave()
     const lock = useSoftLockStore((s) => s.locks[object.id])
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
@@ -72,11 +75,18 @@ export function ImageObject({ object, channel, userId, nickname, dimmed, canEdit
     }
 
     //다른 사람이 잠금 설정되어 있는지 확인
-    const lockedByOther = Boolean(lock && lock.userId !== userId) 
+    const lockedByOther = Boolean(lock && lock.userId !== userId)
 
     return (
-        <div style={{ position: 'absolute', left: object.pos_x, top: object.pos_y, opacity: lockedByOther ? 0.6 : dimmed ? 0.3 : 1,
-            pointerEvents: lockedByOther ? 'none' : 'auto', }}>
+        <div
+            className={isSelected ? 'object-selected' : undefined}
+            style={{
+                position: 'absolute',
+                left: object.pos_x,
+                top: object.pos_y,
+                opacity: lockedByOther ? 0.6 : dimmed ? 0.3 : 1,
+                pointerEvents: lockedByOther ? 'none' : 'auto',
+            }}>
             {lockedByOther && <SoftLockOverlay nickname={lock.nickname} />}
             {canEdit && <button
                 onClick={() => deleteObject(object.id)}

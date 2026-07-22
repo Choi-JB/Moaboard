@@ -45,3 +45,20 @@ button {
 a {
   color: inherit;
 }
+
+
+@keyframes object-selected-blink {
+  0%,
+  100% {
+    outline-color: var(--color-accent);
+  }
+  50% {
+    outline-color: transparent;
+  }
+}
+
+.object-selected {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+  animation: object-selected-blink 1s ease-in-out infinite;
+}

@@ -22,11 +22,15 @@ const HEARTBEAT_MS = 4000
 export function MemoObject({ object, channel, userId, nickname, dimmed, canEdit }: MemoObjectProps) {
     const{ commitPosition, commitMemoData, deleteObject } = useAutoSave()
     const updateObjectPosition = useBoardObjectsStore((s) => s.updateObjectPosition)
+    const selectedObjectId = useBoardObjectsStore((s) => s.selectedObjectId)
+
+    const isSelected = selectedObjectId === object.id
     const lock = useSoftLockStore((s) => s.locks[object.id])
     const dragStart = useRef<{ pointerX: number; pointerY: number; posX: number; posY: number } | null>(null)
     const lastSentRef = useRef(0)
     const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+    
 
     //잠금 신호 전송
     function sendLock(action: 'dragging' | 'editing' | 'end') {
@@ -101,6 +105,7 @@ export function MemoObject({ object, channel, userId, nickname, dimmed, canEdit 
 
     return (
         <div
+            className={isSelected ? 'object-selected' : undefined}
             onPointerDown={canEdit ? handlePointerDown : undefined}
             onPointerMove={canEdit ? handlePointerMove : undefined}
             onPointerUp={canEdit ? handlePointerUp : undefined}
@@ -112,10 +117,9 @@ export function MemoObject({ object, channel, userId, nickname, dimmed, canEdit 
                 height: object.height,
                 background: object.data.color,
                 padding: 8,
-                cursor: 'grab',
+                cursor: canEdit ? 'grab' : 'default',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 borderRadius: 4,
-
                 opacity: lockedByOther ? 0.6 : dimmed ? 0.3 : 1,
                 pointerEvents: lockedByOther ? 'none' : 'auto',
             }}

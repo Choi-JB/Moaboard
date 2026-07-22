@@ -2,6 +2,7 @@
 import { usePresenceStore } from '../../../stores/usePresenceStore'
 import { formatRelativeTime } from '../../../lib/relativeTime'
 import type { BoardObject, MemoData } from '../../../types/boardObject'
+import { useBoardObjectsStore } from '../../../stores/useBoardObjectsStore'
 
 interface ObjectListItemProps {
     object: BoardObject
@@ -15,7 +16,10 @@ const TYPE_ICON: Record<BoardObject['type'], string> = {
 
 export function ObjectListItem({ object, myUserId }: ObjectListItemProps) {
     const onlineUsers = usePresenceStore((s) => s.onlineUsers)
+    const selectedObjectId = useBoardObjectsStore((s) => s.selectedObjectId)
+    const setSelectedObjectId = useBoardObjectsStore((s) => s.setSelectedObjectId)
 
+    const isSelected = selectedObjectId === object.id
     const isMine = object.created_by === myUserId
     const creatorNickname = isMine
         ? '나'
@@ -28,6 +32,7 @@ export function ObjectListItem({ object, myUserId }: ObjectListItemProps) {
 
     return (
         <div
+            onClick={() => setSelectedObjectId(isSelected ? null : object.id)}
             style={{
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -35,6 +40,8 @@ export function ObjectListItem({ object, myUserId }: ObjectListItemProps) {
                 padding: '8px 12px',
                 borderBottom: '1px solid var(--color-border)',
                 fontSize: 13,
+                background: isSelected ? 'var(--color-surface)' : 'transparent',
+                cursor: 'pointer',
             }}
         >
             <span>{TYPE_ICON[object.type]}</span>
